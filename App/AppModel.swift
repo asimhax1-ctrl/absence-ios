@@ -14,6 +14,17 @@ final class AppModel: ObservableObject {
     }
     var scheme: ColorScheme? { theme == 1 ? .light : theme == 2 ? .dark : nil }
 
+    // إشعار صغير أعلى الشاشة بدل نوافذ التنبيه
+    @Published var toast: (text: String, ok: Bool)? = nil
+    private var toastTask: DispatchWorkItem?
+    func say(_ text: String, ok: Bool = true) {
+        toastTask?.cancel()
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) { toast = (text, ok) }
+        let t = DispatchWorkItem { [weak self] in withAnimation(.easeOut(duration: 0.25)) { self?.toast = nil } }
+        toastTask = t
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.4, execute: t)
+    }
+
     init() {
         if let s = Store.shared.load() { state = s }
         else { state = .fresh(); state.changedAt = ISO8601DateFormatter().string(from: Date()); Store.shared.save(state) }
@@ -49,6 +60,8 @@ final class AppModel: ObservableObject {
                 s.log.append(LogEntry(id: "a" + String(UUID().uuidString.prefix(8)), s: sid, d: d, ex: false))
             }
         }
+        let names = Set(items.compactMap { Term.sessions[$0.0]?.course.short })
+        say("سُجّل غياب " + names.sorted().joined(separator: "، "))
     }
     func unlog(_ sid: String, _ d: String) { mutate { $0.log.removeAll { $0.s == sid && $0.d == d } } }
     func remove(_ e: LogEntry) { mutate { $0.log.removeAll { $0.id == e.id } } }

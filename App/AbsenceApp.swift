@@ -31,6 +31,21 @@ struct ContentView: View {
             ExamsView().tabItem { Label("الاختبارات", systemImage: "list.clipboard") }
             SettingsView().tabItem { Label("الإعدادات", systemImage: "gearshape") }
         }
+        .overlay(alignment: .top) {
+            if let t = m.toast {
+                HStack(spacing: 10) {
+                    Image(systemName: t.ok ? "checkmark.circle.fill" : "exclamationmark.circle.fill")
+                        .foregroundStyle(t.ok ? Theme.good : Theme.warn)
+                    Text(t.text).font(.subheadline.weight(.semibold)).multilineTextAlignment(.leading)
+                }
+                .padding(.horizontal, 18).padding(.vertical, 12)
+                .background(.regularMaterial, in: Capsule())
+                .shadow(color: .black.opacity(0.15), radius: 16, y: 6)
+                .padding(.horizontal, 24).padding(.top, 6)
+                .transition(.move(edge: .top).combined(with: .opacity))
+                .onTapGesture { m.toast = nil }
+            }
+        }
     }
 }
 

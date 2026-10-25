@@ -102,7 +102,6 @@ struct ExamSheet: View {
 // ───────── الإعدادات ─────────
 struct SettingsView: View {
     @EnvironmentObject var m: AppModel
-    @State private var msg: String? = nil
     @State private var confirmReset = false
 
     var body: some View {
@@ -133,7 +132,8 @@ struct SettingsView: View {
                 Section {
                     Text(Store.shared.backendsText).font(.callout.monospaced())
                     Text(widgetStatus).font(.footnote)
-                    Button("حدّث الودجت الحين") { WidgetCenter.shared.reloadAllTimelines(); msg = "طلبت من iOS يحدّث الودجت." }
+                    Button("حدّث الودجت الحين") { WidgetCenter.shared.reloadAllTimelines(); m.say("طلبت من iOS يحدّث الودجت") }
+                    DisclosureGroup("تفاصيل التوقيع") { Text(Store.shared.profileText).font(.footnote.monospaced()).textSelection(.enabled) }
                 } header: { Text("مشاركة البيانات مع الودجت") } footer: {
                     Text(Store.shared.sharedWithWidget ? "الودجت يقرأ نفس بياناتك." : "التوقيع الحالي ما يسمح بالمشاركة، فالودجت بيكتب «افتح التطبيق».")
                 }
@@ -141,9 +141,9 @@ struct SettingsView: View {
                 Section("نقل البيانات") {
                     Button("استيراد من Scriptable (الصق من الحافظة)") {
                         let txt = UIPasteboard.general.string ?? ""
-                        msg = m.importJSON(txt) ? "تم الاستيراد ✓" : "الحافظة ما فيها بيانات الحاسبة. في Scriptable: الإعدادات › تصدير البيانات لتطبيق iOS."
+                        if m.importJSON(txt) { m.say("تم استيراد بياناتك") } else { m.say("الحافظة ما فيها بيانات الحاسبة", ok: false) }
                     }
-                    Button("نسخ بياناتي (نسخة احتياطية)") { UIPasteboard.general.string = m.exportJSON(); msg = "انسخت إلى الحافظة." }
+                    Button("نسخ بياناتي (نسخة احتياطية)") { UIPasteboard.general.string = m.exportJSON(); m.say("انسخت بياناتك") }
                     Button("إرجاع السجل لغياب البوابة فقط", role: .destructive) { confirmReset = true }
                 }
                 .listRowBackground(Theme.card)
@@ -155,7 +155,6 @@ struct SettingsView: View {
             .scrollContentBackground(.hidden)
             .background(Theme.ground.ignoresSafeArea())
             .navigationTitle("الإعدادات")
-            .alert(msg ?? "", isPresented: Binding(get: { msg != nil }, set: { if !$0 { msg = nil } })) { Button("تم") {} }
             .confirmationDialog("يحذف كل تسجيلاتك ويرجع لغياب البوابة (حتى ٦ أكتوبر). الاختبارات تبقى.", isPresented: $confirmReset, titleVisibility: .visible) {
                 Button("إرجاع", role: .destructive) { m.resetToPortal() }
             }

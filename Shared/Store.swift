@@ -15,15 +15,34 @@ final class Store {
 
     private(set) var teamPrefix: String? = nil
     private(set) var groupURL: URL? = nil
+    private(set) var groupUsed: String? = nil
     private(set) var keychainOK = false
+    private(set) var keychainGroup: String? = nil
+    let profile: [String: Any]?
 
     private init() {
-        if let u = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: Store.groupID) {
-            let probe = u.appendingPathComponent(".probe")
-            if (try? Data("ok".utf8).write(to: probe)) != nil { groupURL = u }
+        profile = Store.readProfile()
+        let ent = profile?["Entitlements"] as? [String: Any]
+        // مجموعات المشاركة: الأصلية، ثم اللي كتبها برنامج التوقيع، ثم الموجودة فعلًا في ملف التوقيع
+        var groups = [Store.groupID]
+        groups += (Bundle.main.object(forInfoDictionaryKey: "ALTAppGroups") as? [String]) ?? []
+        groups += (ent?["com.apple.security.application-groups"] as? [String]) ?? []
+        for g in groups {
+            if let u = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: g) {
+                let probe = u.appendingPathComponent(".probe")
+                if (try? Data("ok".utf8).write(to: probe)) != nil { groupURL = u; groupUsed = g; break }
+            }
         }
-        teamPrefix = Store.findTeamPrefix()
-        keychainOK = probeKeychain()
+        teamPrefix = (profile?["TeamIdentifier"] as? [String])?.first ?? Store.findTeamPrefix()
+        // مجموعة Keychain: من ملف التوقيع (يدعم TEAMID.*) وإلا الافتراضية
+        let kgs = (ent?["keychain-access-groups"] as? [String]) ?? []
+        var kcCandidates: [String] = []
+        for g in kgs {
+            if g.hasSuffix(".*") { kcCandidates.append(String(g.dropLast(1)) + "com.asim.absence1448.shared") }
+            else if g.hasSuffix(".com.asim.absence1448.shared") { kcCandidates.append(g) }
+        }
+        if let t = teamPrefix { kcCandidates.append(t + ".com.asim.absence1448.shared") }
+        for g in kcCandidates where probeKeychain(g) { keychainGroup = g; keychainOK = true; break }
     }
 
     var sharedWithWidget: Bool { groupURL != nil || keychainOK }
@@ -33,6 +52,32 @@ final class Store {
         a.append(keychainOK ? "✓ Keychain مشترك" : "✗ Keychain مشترك")
         a.append("✓ ملف محلي")
         return a.joined(separator: "\n")
+    }
+
+    // تفاصيل ملف التوقيع: يوضح ليش المشاركة شغالة أو لا
+    var profileText: String {
+        guard let p = profile else { return "ما فيه ملف توقيع داخل التطبيق (embedded.mobileprovision)." }
+        let ent = p["Entitlements"] as? [String: Any] ?? [:]
+        let appID = ent["application-identifier"] as? String ?? "?"
+        let groups = (ent["com.apple.security.application-groups"] as? [String]) ?? []
+        let kc = (ent["keychain-access-groups"] as? [String]) ?? []
+        let devices = (p["ProvisionedDevices"] as? [Any])?.count
+        var out = "الشهادة: \(p["TeamName"] as? String ?? "?") (\(teamPrefix ?? "?"))\n"
+        out += "الملف: \(p["Name"] as? String ?? "?")\n"
+        out += "المعرّف: \(appID)\n"
+        out += "App Groups: " + (groups.isEmpty ? "لا يوجد" : groups.joined(separator: "، ")) + "\n"
+        out += "Keychain: " + (kc.isEmpty ? "لا يوجد" : kc.joined(separator: "، "))
+        if let n = devices { out += "\nأجهزة مسجلة: \(n)" }
+        if let g = groupUsed { out += "\nالمستخدم: \(g)" } else if let k = keychainGroup { out += "\nالمستخدم: \(k)" }
+        return out
+    }
+
+    private static func readProfile() -> [String: Any]? {
+        guard let url = Bundle.main.url(forResource: "embedded", withExtension: "mobileprovision"),
+              let data = try? Data(contentsOf: url) else { return nil }
+        guard let start = data.range(of: Data("<?xml".utf8)), let end = data.range(of: Data("</plist>".utf8), in: start.lowerBound..<data.endIndex) else { return nil }
+        let plist = data.subdata(in: start.lowerBound..<end.upperBound)
+        return (try? PropertyListSerialization.propertyList(from: plist, format: nil)) as? [String: Any]
     }
 
     // ── قراءة / كتابة ──
@@ -72,7 +117,7 @@ final class Store {
     }
 
     // ── Keychain ──
-    private var accessGroup: String? { teamPrefix.map { $0 + ".com.asim.absence1448.shared" } }
+    private var accessGroup: String? { keychainGroup }
 
     // نضيف عنصرًا بدون مجموعة ثم نقرأ مجموعته الافتراضية: "TEAMID.bundle.id" → نأخذ TEAMID
     private static func findTeamPrefix() -> String? {
@@ -111,8 +156,12 @@ final class Store {
         var res: CFTypeRef?
         return SecItemCopyMatching(q as CFDictionary, &res) == errSecSuccess ? res as? Data : nil
     }
-    private func probeKeychain() -> Bool {
-        guard let q = baseQuery("com.asim.absence1448.probe") else { return false }
+    private func probeKeychain(_ group: String) -> Bool {
+        let q: [String: Any] = [kSecClass as String: kSecClassGenericPassword,
+                                kSecAttrService as String: "com.asim.absence1448.probe",
+                                kSecAttrAccount as String: "data",
+                                kSecAttrAccessGroup as String: group,
+                                kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlock]
         let st = SecItemUpdate(q as CFDictionary, [kSecValueData as String: Data("1".utf8)] as CFDictionary)
         if st == errSecSuccess { return true }
         if st == errSecItemNotFound { var a = q; a[kSecValueData as String] = Data("1".utf8); return SecItemAdd(a as CFDictionary, nil) == errSecSuccess }

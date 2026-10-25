@@ -10,14 +10,16 @@ permissions:
 
 jobs:
   build:
-    runs-on: macos-15
+    runs-on: macos-26
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
 
       - name: Xcode
         run: |
-          XC="$(ls -d /Applications/Xcode_16*.app | sort -V | tail -1)"
+          echo "::notice title=xcodes::$(ls -d /Applications/Xcode*.app | tr '\n' ' ')"
+          # أحدث Xcode (26+) = واجهة iOS 26 الزجاجية تلقائيًا
+          XC="$(ls -d /Applications/Xcode_*.app | grep -v -i beta | sort -V | tail -1)"
           sudo xcode-select -s "$XC"
           echo "::notice title=xcode::$(xcodebuild -version | tr '\n' ' ')"
 
