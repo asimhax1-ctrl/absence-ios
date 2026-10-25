@@ -84,39 +84,64 @@ struct RectView: View {
     let e: Entry
     var body: some View {
         GeometryReader { g in
-            let v = Engine.verdict(e.state, now: e.date)
-            let meta = Engine.headerMeta(e.state, v, now: e.date, showWeek: e.cfg.showWeek)
-            let rows = v.items
-            let extra = CGFloat(e.cfg.size)
-            // ارتفاع تقديري لكل المحتوى؛ إذا زاد عن الودجت نصغّر كل شي بنسبة وحدة
-            let need = max((23 + extra) * 1.25, CGFloat(meta.lines.count) * (9.5 + extra * 0.5) * 1.3)
-                + CGFloat(min(2, max(1, rows.count))) * (15 + extra) * 1.3 + 2
-            let k = min(1, g.size.height / need)
-            let L = Look(cfg: e.cfg, k: k)
-            VStack(alignment: .leading, spacing: 1 * k) {
-                if !e.shared {
-                    Text("افتح التطبيق مرة").font(L.f(13, true))
-                    Text("البيانات غير مشتركة مع الودجت").font(L.f(10)).opacity(0.8)
-                } else {
-                    header(L, meta, v)
-                    if let first = rows.first {
-                        fullRow(L, first)
-                        if rows.count == 2 { fullRow(L, rows[1]) }
-                        if rows.count >= 3 {
-                            HStack(spacing: 4) {
-                                cell(L, rows[1]); Spacer(minLength: 2); cell(L, rows[2])
-                            }
-                        }
-                    } else if !v.alreadyOver.isEmpty {
-                        Text(L.t("✗ تجاوزت الحد: " + v.alreadyOver.map { $0.c.short }.joined(separator: "، "))).font(L.f(12, true)).lineLimit(1).minimumScaleFactor(0.5)
-                    } else {
-                        Text(L.t(v.head)).font(L.f(13, true)).lineLimit(1).minimumScaleFactor(0.5)
-                    }
-                }
-            }
-            .frame(width: g.size.width, height: g.size.height, alignment: .topLeading)
+            RectContent(e: e, size: g.size)
         }
         .environment(\.layoutDirection, .rightToLeft)
+    }
+}
+
+struct RectContent: View {
+    let e: Entry
+    let size: CGSize
+
+    var v: Verdict { Engine.verdict(e.state, now: e.date) }
+
+    // ارتفاع تقديري لكل المحتوى؛ إذا زاد عن الودجت نصغّر كل شي بنسبة وحدة
+    func scale(_ metaCount: Int, _ rowCount: Int) -> CGFloat {
+        let extra = CGFloat(e.cfg.size)
+        let dayH: CGFloat = (23 + extra) * 1.25
+        let metaH: CGFloat = CGFloat(metaCount) * (9.5 + extra * 0.5) * 1.3
+        let rows: CGFloat = CGFloat(min(2, max(1, rowCount)))
+        let rowsH: CGFloat = rows * (15 + extra) * 1.3
+        let need: CGFloat = max(dayH, metaH) + rowsH + 2
+        return min(1, size.height / need)
+    }
+
+    var body: some View {
+        let verdict = v
+        let meta = Engine.headerMeta(e.state, verdict, now: e.date, showWeek: e.cfg.showWeek)
+        let rows = verdict.items
+        let L = Look(cfg: e.cfg, k: scale(meta.lines.count, rows.count))
+        return VStack(alignment: .leading, spacing: 1) {
+            if !e.shared {
+                Text("افتح التطبيق مرة").font(L.f(13, true))
+                Text("البيانات غير مشتركة مع الودجت").font(L.f(10)).opacity(0.8)
+            } else {
+                header(L, meta, verdict)
+                bodyRows(L, verdict, rows)
+            }
+        }
+        .frame(width: size.width, height: size.height, alignment: .topLeading)
+    }
+
+    @ViewBuilder
+    func bodyRows(_ L: Look, _ verdict: Verdict, _ rows: [VItem]) -> some View {
+        if let first = rows.first {
+            fullRow(L, first)
+            if rows.count == 2 { fullRow(L, rows[1]) }
+            if rows.count >= 3 {
+                HStack(spacing: 4) {
+                    cell(L, rows[1])
+                    Spacer(minLength: 2)
+                    cell(L, rows[2])
+                }
+            }
+        } else if !verdict.alreadyOver.isEmpty {
+            let names = verdict.alreadyOver.map { $0.c.short }.joined(separator: "، ")
+            Text(L.t("✗ تجاوزت الحد: " + names)).font(L.f(12, true)).lineLimit(1).minimumScaleFactor(0.5)
+        } else {
+            Text(L.t(verdict.head)).font(L.f(13, true)).lineLimit(1).minimumScaleFactor(0.5)
+        }
     }
 
     func header(_ L: Look, _ meta: (todayDay: Int, lines: [String]), _ v: Verdict) -> some View {
