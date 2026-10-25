@@ -1,0 +1,3 @@
+Fonts in this folder (Aref Ruqaa, Aref Ruqaa Ink, Amiri, Reem Kufi, Noto Kufi Arabic, Kufam, Changa, El Messiri,
+Tajawal, Lalezar, Rakkas, Marhey, Jomhuria) are from https://github.com/google/fonts and are licensed under the
+SIL Open Font License, Version 1.1 — https://openfontlicense.org

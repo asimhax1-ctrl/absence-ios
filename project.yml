@@ -1,0 +1,105 @@
+name: Absence
+options:
+  bundleIdPrefix: com.asim
+  deploymentTarget:
+    iOS: "17.0"
+  developmentLanguage: ar
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    IPHONEOS_DEPLOYMENT_TARGET: "17.0"
+    TARGETED_DEVICE_FAMILY: "1,2"
+    CODE_SIGNING_ALLOWED: "NO"
+    CODE_SIGNING_REQUIRED: "NO"
+    CODE_SIGN_IDENTITY: ""
+    DEVELOPMENT_TEAM: ""
+    MARKETING_VERSION: "1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    ENABLE_USER_SCRIPT_SANDBOXING: "NO"
+targets:
+  Absence:
+    type: application
+    platform: iOS
+    sources:
+      - path: App
+      - path: Shared
+      - path: Fonts
+        buildPhase: resources
+    info:
+      path: App/Info.plist
+      properties:
+        CFBundleDisplayName: الحرمان
+        CFBundleDevelopmentRegion: ar
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
+        UISupportedInterfaceOrientations~ipad: [UIInterfaceOrientationPortrait, UIInterfaceOrientationLandscapeLeft, UIInterfaceOrientationLandscapeRight, UIInterfaceOrientationPortraitUpsideDown]
+        CFBundleURLTypes:
+          - CFBundleURLName: com.asim.absence1448
+            CFBundleURLSchemes: [absence1448]
+        UIAppFonts:
+        - Amiri-Bold.ttf
+        - Amiri-Regular.ttf
+        - ArefRuqaa-Bold.ttf
+        - ArefRuqaa-Regular.ttf
+        - ArefRuqaaInk-Bold.ttf
+        - ArefRuqaaInk-Regular.ttf
+        - Changa.ttf
+        - ElMessiri.ttf
+        - Jomhuria-Regular.ttf
+        - Kufam.ttf
+        - Lalezar-Regular.ttf
+        - Marhey.ttf
+        - NotoKufiArabic.ttf
+        - Rakkas-Regular.ttf
+        - ReemKufi.ttf
+        - Tajawal-Black.ttf
+        - Tajawal-Regular.ttf
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.asim.absence1448
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        CODE_SIGN_ENTITLEMENTS: ""
+    dependencies:
+      - target: AbsenceWidget
+        embed: true
+    scheme: {}
+  AbsenceWidget:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: Widget
+      - path: Shared
+      - path: Fonts
+        buildPhase: resources
+    info:
+      path: Widget/Info.plist
+      properties:
+        CFBundleDisplayName: الحرمان
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+        UIAppFonts:
+        - Amiri-Bold.ttf
+        - Amiri-Regular.ttf
+        - ArefRuqaa-Bold.ttf
+        - ArefRuqaa-Regular.ttf
+        - ArefRuqaaInk-Bold.ttf
+        - ArefRuqaaInk-Regular.ttf
+        - Changa.ttf
+        - ElMessiri.ttf
+        - Jomhuria-Regular.ttf
+        - Kufam.ttf
+        - Lalezar-Regular.ttf
+        - Marhey.ttf
+        - NotoKufiArabic.ttf
+        - Rakkas-Regular.ttf
+        - ReemKufi.ttf
+        - Tajawal-Black.ttf
+        - Tajawal-Regular.ttf
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.asim.absence1448.widget
+        CODE_SIGN_ENTITLEMENTS: ""
