@@ -13,34 +13,45 @@ jobs:
     runs-on: macos-15
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Xcode
         run: |
-          sudo xcode-select -s "$(ls -d /Applications/Xcode_16*.app | sort -V | tail -1)"
-          xcodebuild -version
+          XC="$(ls -d /Applications/Xcode_16*.app | sort -V | tail -1)"
+          sudo xcode-select -s "$XC"
+          echo "::notice title=xcode::$(xcodebuild -version | tr '\n' ' ')"
 
       - name: Generate project
         run: |
-          brew install xcodegen
-          xcodegen generate
+          brew install xcodegen >/dev/null
+          xcodegen generate 2>&1 | tail -5
+          echo "::notice title=xcodegen::$(xcodegen --version) — $(ls -d *.xcodeproj)"
 
       - name: Build (unsigned)
         run: |
-          set -o pipefail
+          set +e
           xcodebuild -project Absence.xcodeproj -scheme Absence -configuration Release \
             -sdk iphoneos -destination 'generic/platform=iOS' -derivedDataPath build \
             CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
-            build 2>&1 | tee build.log | grep -E "error:|warning: unre|BUILD (SUCCEEDED|FAILED)" || true
-          test -d build/Build/Products/Release-iphoneos/Absence.app
+            build > build.log 2>&1
+          RC=$?
+          echo "::notice title=xcodebuild::exit $RC — $(grep -E 'BUILD (SUCCEEDED|FAILED)' build.log | tail -1)"
+          # أول 40 خطأ كتعليقات قابلة للقراءة عبر الـ API
+          grep -E "error:" build.log | sort -u | head -40 | while IFS= read -r line; do
+            echo "::warning title=compile::${line//$'\n'/ }"
+          done
+          tail -15 build.log | while IFS= read -r line; do echo "::notice title=tail::$line"; done
+          APP=build/Build/Products/Release-iphoneos/Absence.app
+          echo "::notice title=app::$(du -sh $APP 2>&1 | tr '\t' ' ') | $(ls $APP 2>&1 | tr '\n' ' ' | head -c 600)"
+          echo "::notice title=plugins::$(ls $APP/PlugIns 2>&1 | tr '\n' ' ')"
+          test $RC -eq 0 && test -f $APP/Absence
 
       - name: Package IPA
         run: |
           mkdir -p Payload
           cp -R build/Build/Products/Release-iphoneos/Absence.app Payload/
-          ls Payload/Absence.app/PlugIns
           zip -qry Absence.ipa Payload
-          ls -lh Absence.ipa
+          echo "::notice title=ipa::$(ls -lh Absence.ipa | awk '{print $5}')"
 
       - name: Upload log on failure
         if: failure()
