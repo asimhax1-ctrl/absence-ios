@@ -1,0 +1,557 @@
+<title>Ghiyab Logo Lab</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.7.0/p5.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&family=Lora:wght@400;500&family=Reem+Kufi:wght@700&family=Aref+Ruqaa:wght@700&family=Readex+Pro:wght@700&family=Noto+Kufi+Arabic:wght@900&family=Lalezar&family=El+Messiri:wght@700&display=swap" rel="stylesheet">
+<style>
+    /* Layout: sidebar of controls + one square canvas; stacks on phones. Anthropic UI chrome, monochrome art. */
+    :root {
+        --anthropic-dark: #141413;
+        --anthropic-light: #faf9f5;
+        --anthropic-mid-gray: #8f8d84;
+        --anthropic-light-gray: #e8e6dc;
+        --anthropic-orange: #d97757;
+        --anthropic-blue: #6a9bcc;
+        --anthropic-green: #788c5d;
+        --panel: rgba(255, 255, 255, 0.95);
+        --page-a: #faf9f5;
+        --page-b: #f5f3ee;
+        --field: #faf9f5;
+        --shadow: rgba(20, 20, 19, 0.1);
+        --font-ui: 'Poppins', 'Readex Pro', system-ui, sans-serif;
+        --font-head: 'Lora', Georgia, serif;
+    }
+    @media (prefers-color-scheme: dark) {
+        :root:not([data-theme="light"]) {
+            --anthropic-dark: #f0eee6; --anthropic-light: #1d1c1a; --anthropic-mid-gray: #a3a19a; --anthropic-light-gray: #3a3935;
+            --panel: rgba(32, 31, 29, 0.95); --page-a: #141413; --page-b: #1b1a18; --field: #262522; --shadow: rgba(0,0,0,0.4);
+            color-scheme: dark;
+        }
+    }
+    :root[data-theme="dark"] {
+        --anthropic-dark: #f0eee6; --anthropic-light: #1d1c1a; --anthropic-mid-gray: #a3a19a; --anthropic-light-gray: #3a3935;
+        --panel: rgba(32, 31, 29, 0.95); --page-a: #141413; --page-b: #1b1a18; --field: #262522; --shadow: rgba(0,0,0,0.4);
+        color-scheme: dark;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+        font-family: var(--font-ui);
+        background: linear-gradient(135deg, var(--page-a) 0%, var(--page-b) 100%);
+        min-height: 100vh;
+        color: var(--anthropic-dark);
+    }
+
+    .container {
+        display: flex;
+        min-height: 100vh;
+        padding-block: 20px;
+        padding-left: max(16px, env(safe-area-inset-left, 0px));
+        padding-right: max(16px, env(safe-area-inset-right, 0px));
+        gap: 20px;
+    }
+
+    .sidebar {
+        width: 340px;
+        flex-shrink: 0;
+        background: var(--panel);
+        backdrop-filter: blur(10px);
+        padding: 24px;
+        border-radius: 12px;
+        box-shadow: 0 10px 30px var(--shadow);
+        overflow-y: auto;
+        overflow-x: hidden;
+    }
+    .sidebar h1 { font-family: var(--font-head); font-size: 24px; font-weight: 500; margin-bottom: 8px; }
+    .sidebar .subtitle { color: var(--anthropic-mid-gray); font-size: 14px; margin-bottom: 28px; line-height: 1.6; }
+
+    .control-section { margin-bottom: 30px; }
+    .control-section h3 { font-size: 16px; font-weight: 600; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+    .control-section h3::before { content: '•'; color: var(--anthropic-orange); font-weight: bold; }
+
+    .seed-input {
+        width: 100%; background: var(--field); color: var(--anthropic-dark); padding: 12px; border-radius: 8px;
+        font-family: 'Courier New', monospace; font-size: 14px; margin-bottom: 12px;
+        border: 1px solid var(--anthropic-light-gray); text-align: center;
+    }
+    .seed-input:focus { outline: none; border-color: var(--anthropic-orange); box-shadow: 0 0 0 2px rgba(217, 119, 87, 0.15); }
+    .seed-controls { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+
+    .control-group { margin-bottom: 18px; }
+    .control-group label { display: block; font-size: 14px; font-weight: 500; margin-bottom: 8px; }
+    .slider-container { display: flex; align-items: center; gap: 12px; }
+    .slider-container input[type="range"] {
+        flex: 1; height: 4px; background: var(--anthropic-light-gray); border-radius: 2px; outline: none; -webkit-appearance: none; min-width: 0;
+    }
+    .slider-container input[type="range"]::-webkit-slider-thumb {
+        -webkit-appearance: none; width: 16px; height: 16px; background: var(--anthropic-orange); border-radius: 50%; cursor: pointer;
+    }
+    .slider-container input[type="range"]::-moz-range-thumb { width: 16px; height: 16px; background: var(--anthropic-orange); border-radius: 50%; border: none; cursor: pointer; }
+    .value-display { font-family: 'Courier New', monospace; font-size: 12px; color: var(--anthropic-mid-gray); min-width: 48px; text-align: right; font-variant-numeric: tabular-nums; }
+
+    .select {
+        width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--anthropic-light-gray);
+        background: var(--field); color: var(--anthropic-dark); font-family: var(--font-ui); font-size: 14px;
+    }
+    .check { display: flex; align-items: center; gap: 10px; font-size: 14px; cursor: pointer; }
+    .check input { width: 18px; height: 18px; accent-color: var(--anthropic-orange); }
+
+    .presets { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+    .preset {
+        border: 1px solid var(--anthropic-light-gray); background: var(--field); color: var(--anthropic-dark);
+        border-radius: 10px; padding: 8px 4px; font-size: 13px; cursor: pointer; font-family: var(--font-ui);
+    }
+    .preset:hover, .preset:focus-visible { border-color: var(--anthropic-orange); outline: none; }
+
+    .button {
+        background: var(--anthropic-orange); color: white; border: none; padding: 10px 16px; border-radius: 6px;
+        font-size: 14px; font-weight: 500; cursor: pointer; transition: all 0.2s ease; width: 100%; font-family: var(--font-ui);
+    }
+    .button:hover { background: #c86641; transform: translateY(-1px); }
+    .button:focus-visible { outline: 2px solid var(--anthropic-dark); outline-offset: 2px; }
+    .button.secondary { background: var(--anthropic-blue); }
+    .button.secondary:hover { background: #5a8bb8; }
+    .button.tertiary { background: var(--anthropic-green); }
+    .button.tertiary:hover { background: #6b7b52; }
+    .button-row { display: flex; gap: 8px; }
+    .button-row .button { flex: 1; }
+
+    .canvas-area { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; min-width: 0; }
+    #canvas-container { width: 100%; max-width: 720px; border-radius: 12px; overflow: hidden; box-shadow: 0 20px 40px var(--shadow); background: #ecebe6; }
+    #canvas-container canvas { display: block; width: 100% !important; height: auto !important; }
+    .loading { display: flex; align-items: center; justify-content: center; font-size: 16px; color: var(--anthropic-mid-gray); padding: 80px 0; }
+
+    .homescreen {
+        width: 100%; max-width: 720px; display: flex; justify-content: center; align-items: flex-end; gap: 28px; flex-wrap: wrap;
+        padding: 20px 16px; border-radius: 12px; background: var(--panel); box-shadow: 0 10px 30px var(--shadow);
+    }
+    .app { display: flex; flex-direction: column; align-items: center; gap: 6px; font-family: 'Readex Pro', system-ui, sans-serif; font-size: 12px; color: var(--anthropic-dark); }
+    .app img { display: block; border-radius: 22.37%; box-shadow: 0 2px 8px rgba(0,0,0,0.18); }
+    .app .size { color: var(--anthropic-mid-gray); font-family: var(--font-ui); font-size: 11px; }
+
+    .export { width: 100%; max-width: 720px; text-align: center; font-size: 13px; color: var(--anthropic-mid-gray); }
+    .export img { width: 220px; max-width: 100%; border-radius: 22.37%; margin: 10px auto 0; display: block; }
+
+    @media (prefers-reduced-motion: reduce) { .button { transition: none; } .button:hover { transform: none; } }
+
+    @media (max-width: 760px) {
+        .container { flex-direction: column; }
+        .sidebar { width: 100%; }
+    }
+</style>
+
+<div class="container">
+    <!-- Control Sidebar -->
+    <div class="sidebar">
+        <h1>Present Absence</h1>
+        <div class="subtitle" dir="rtl">شعار «غياب»: حقل من النقاط، كل نقطة ساعة محاضرة. الحرف ما ينرسم، يظهر من الفراغ اللي يتركه الغياب. ونقاط الحروف وحدها تبقى مصمتة.</div>
+
+        <!-- Seed Section (ALWAYS KEEP THIS) -->
+        <div class="control-section">
+            <h3>Seed</h3>
+            <input type="number" id="seed-input" class="seed-input" value="12345" onchange="updateSeed()" aria-label="Seed">
+            <div class="seed-controls">
+                <button class="button secondary" onclick="previousSeed()">← Prev</button>
+                <button class="button secondary" onclick="nextSeed()">Next →</button>
+            </div>
+            <button class="button tertiary regen-button" onclick="randomSeedAndUpdate()">↻ Random</button>
+        </div>
+
+        <!-- Presets -->
+        <div class="control-section" dir="rtl">
+            <h3>تشكيلات جاهزة</h3>
+            <div class="presets">
+                <button class="preset" onclick="applyPreset(0)">١ · غ كوفي</button>
+                <button class="preset" onclick="applyPreset(1)">٢ · غ رقعة</button>
+                <button class="preset" onclick="applyPreset(2)">٣ · غياب</button>
+                <button class="preset" onclick="applyPreset(3)">٤ · حلقات</button>
+                <button class="preset" onclick="applyPreset(4)">٥ · شرطات</button>
+                <button class="preset" onclick="applyPreset(5)">٦ · كثيف</button>
+            </div>
+        </div>
+
+        <!-- Parameters Section -->
+        <div class="control-section" dir="rtl">
+            <h3>المتغيرات</h3>
+
+            <div class="control-group">
+                <label for="glyph">الشكل</label>
+                <select id="glyph" class="select" onchange="updateParam('glyph', this.value)">
+                    <option value="غ">حرف «غ»</option>
+                    <option value="غياب">كلمة «غياب»</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <label for="font">الخط</label>
+                <select id="font" class="select" onchange="updateParam('font', this.value)">
+                    <option value="Reem Kufi">ريم كوفي</option>
+                    <option value="Aref Ruqaa">رقعة</option>
+                    <option value="Readex Pro">ريدكس</option>
+                    <option value="Noto Kufi Arabic">نوتو كوفي</option>
+                    <option value="Lalezar">لاله‌زار</option>
+                    <option value="El Messiri">المسيري</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <label for="marks">شكل العلامات</label>
+                <select id="marks" class="select" onchange="updateParam('marks', this.value)">
+                    <option value="dot">نقاط</option>
+                    <option value="tick">شرطات (مثل كشف الحضور)</option>
+                    <option value="ring">حلقات</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <label for="spacing">المسافة بين العلامات</label>
+                <div class="slider-container">
+                    <input type="range" id="spacing" min="10" max="40" step="1" value="18" oninput="updateParam('spacing', this.value)">
+                    <span class="value-display" id="spacing-value">18</span>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label for="dotSize">حجم العلامة</label>
+                <div class="slider-container">
+                    <input type="range" id="dotSize" min="0.15" max="0.5" step="0.01" value="0.38" oninput="updateParam('dotSize', this.value)">
+                    <span class="value-display" id="dotSize-value">0.38</span>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label for="halo">تلاشي حول الحرف</label>
+                <div class="slider-container">
+                    <input type="range" id="halo" min="0" max="8" step="0.5" value="3" oninput="updateParam('halo', this.value)">
+                    <span class="value-display" id="halo-value">3</span>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label for="letterScale">حجم الحرف</label>
+                <div class="slider-container">
+                    <input type="range" id="letterScale" min="0.35" max="0.85" step="0.01" value="0.6" oninput="updateParam('letterScale', this.value)">
+                    <span class="value-display" id="letterScale-value">0.6</span>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label for="wobble">تنفّس الحقل</label>
+                <div class="slider-container">
+                    <input type="range" id="wobble" min="0" max="1" step="0.05" value="0.35" oninput="updateParam('wobble', this.value)">
+                    <span class="value-display" id="wobble-value">0.35</span>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label class="check" for="solidDots"><input type="checkbox" id="solidDots" checked onchange="updateParam('solidDots', this.checked)"> نقاط الحروف مصمتة</label>
+            </div>
+            <div class="control-group">
+                <label class="check" for="invert"><input type="checkbox" id="invert" checked onchange="updateParam('invert', this.checked)"> أبيض على أسود</label>
+            </div>
+        </div>
+
+        <!-- Actions Section (ALWAYS KEEP THIS) -->
+        <div class="control-section">
+            <h3>Actions</h3>
+            <div class="button-row">
+                <button class="button" onclick="initializeSystem()">Regenerate</button>
+                <button class="button secondary" onclick="resetParameters()">Reset</button>
+            </div>
+            <div class="button-row" style="margin-top: 8px;">
+                <button class="button tertiary" onclick="showPNG()">PNG للحفظ</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Canvas Area -->
+    <div class="canvas-area">
+        <div id="canvas-container">
+            <div class="loading">Loading Arabic fonts…</div>
+        </div>
+        <div class="homescreen" aria-label="معاينة على الشاشة الرئيسية">
+            <div class="app"><img id="mini-120" width="120" height="120" alt="الأيقونة ١٢٠"><span>غياب</span><span class="size">120</span></div>
+            <div class="app"><img id="mini-60" width="60" height="60" alt="الأيقونة ٦٠"><span>غياب</span><span class="size">60 · حجم الآيفون</span></div>
+            <div class="app"><img id="mini-29" width="29" height="29" alt="الأيقونة ٢٩"><span class="size">29 · الإعدادات</span></div>
+        </div>
+        <div class="export" id="export" hidden dir="rtl">اضغط مطولًا على الصورة واحفظها، أو أرسل لي رقم الـ Seed والتشكيلة.<img id="export-img" alt="الأيقونة بدقة ١٠٢٤"></div>
+    </div>
+</div>
+
+<script>
+    // ═══════════════════════════════════════════════════════════════════════
+    // PARAMETERS
+    // ═══════════════════════════════════════════════════════════════════════
+    let params = {
+        seed: 12345,
+        glyph: 'غ',
+        font: 'Reem Kufi',
+        marks: 'dot',
+        spacing: 18,
+        dotSize: 0.38,
+        halo: 3,
+        letterScale: 0.6,
+        wobble: 0.35,
+        solidDots: true,
+        invert: true
+    };
+    let defaultParams = {...params};
+
+    const PRESETS = [
+        { seed: 12345, glyph: 'غ', font: 'Reem Kufi', marks: 'dot', spacing: 18, dotSize: 0.38, halo: 3, letterScale: 0.6, wobble: 0.35, solidDots: true, invert: true },
+        { seed: 2048, glyph: 'غ', font: 'Aref Ruqaa', marks: 'tick', spacing: 20, dotSize: 0.34, halo: 2.5, letterScale: 0.66, wobble: 0.5, solidDots: true, invert: false },
+        { seed: 77, glyph: 'غياب', font: 'Lalezar', marks: 'dot', spacing: 13, dotSize: 0.4, halo: 1.5, letterScale: 0.8, wobble: 0.25, solidDots: true, invert: true },
+        { seed: 31, glyph: 'غ', font: 'Readex Pro', marks: 'ring', spacing: 24, dotSize: 0.42, halo: 2, letterScale: 0.56, wobble: 0.3, solidDots: true, invert: false },
+        { seed: 909, glyph: 'غياب', font: 'Noto Kufi Arabic', marks: 'tick', spacing: 14, dotSize: 0.36, halo: 1, letterScale: 0.78, wobble: 0.6, solidDots: true, invert: true },
+        { seed: 4242, glyph: 'غ', font: 'El Messiri', marks: 'dot', spacing: 11, dotSize: 0.44, halo: 5, letterScale: 0.62, wobble: 0.45, solidDots: true, invert: true }
+    ];
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // ALGORITHM: Present Absence
+    // ═══════════════════════════════════════════════════════════════════════
+    const W = 1200;               // canvas
+    const G = 400;                // mask grid (1 cell = 3px)
+    const CELL = W / G;
+    const ICON = 1000;            // icon square
+    const ICON_X = (W - ICON) / 2;
+    let ready = false;
+    let mask, comp, distAll, dotBodies = [], points = [];
+
+    function setup() {
+        const c = createCanvas(W, W);
+        c.parent('canvas-container');
+        pixelDensity(1);
+        noLoop();
+        const fams = ['Reem Kufi', 'Aref Ruqaa', 'Readex Pro', 'Noto Kufi Arabic', 'Lalezar', 'El Messiri'];
+        Promise.all(fams.map(f => document.fonts.load(`700 200px "${f}"`, 'غياب'))).catch(() => {}).then(() => {
+            ready = true;
+            const l = document.querySelector('.loading'); if (l) l.hidden = true;
+            initializeSystem();
+        });
+    }
+
+    function initializeSystem() {
+        if (!ready) return;
+        randomSeed(params.seed);
+        noiseSeed(params.seed);
+        buildMask();
+        scatter();
+        renderIcon();
+        updatePreviews();
+    }
+
+    // superellipse (continuous-curvature icon shape), u,v in [-1,1]
+    function squircle(u, v, n) { return Math.pow(Math.abs(u), n) + Math.pow(Math.abs(v), n) <= 1; }
+    function insideField(x, y) {
+        const half = ICON / 2 - 92;
+        return squircle((x - W / 2) / half, (y - W / 2) / half, 5);
+    }
+
+    // 1) rasterise the Arabic form, fit it, split bodies from dots, measure distance
+    function buildMask() {
+        const g = createGraphics(G, G);
+        g.pixelDensity(1);
+        const drawGlyph = (size, x, y) => {
+            g.background(0); g.noStroke(); g.fill(255);
+            g.drawingContext.direction = 'rtl';
+            g.drawingContext.font = `700 ${size}px "${params.font}", sans-serif`;
+            g.drawingContext.textAlign = 'center';
+            g.drawingContext.textBaseline = 'middle';
+            g.drawingContext.fillText(params.glyph, x, y);
+            g.loadPixels();
+        };
+        drawGlyph(160, G / 2, G / 2);
+        let x0 = G, x1 = 0, y0 = G, y1 = 0;
+        for (let y = 0; y < G; y++) for (let x = 0; x < G; x++) {
+            if (g.pixels[(y * G + x) * 4] > 127) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+        }
+        if (x1 <= x0) { x0 = 150; x1 = 250; y0 = 150; y1 = 250; }
+        const target = params.letterScale * (ICON / CELL) * 0.86;
+        const k = target / Math.max(x1 - x0, y1 - y0);
+        const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
+        drawGlyph(160 * k, G / 2 - (cx - G / 2) * k, G / 2 - (cy - G / 2) * k);
+
+        mask = new Uint8Array(G * G);
+        for (let i = 0; i < G * G; i++) mask[i] = g.pixels[i * 4] > 127 ? 1 : 0;
+        g.remove();
+
+        // connected components (4-neighbour flood fill)
+        comp = new Int32Array(G * G).fill(-1);
+        const areas = [], sums = [];
+        const stack = new Int32Array(G * G);
+        let label = 0;
+        for (let i = 0; i < G * G; i++) {
+            if (!mask[i] || comp[i] >= 0) continue;
+            let sp = 0, area = 0, sx = 0, sy = 0;
+            stack[sp++] = i; comp[i] = label;
+            while (sp) {
+                const p = stack[--sp]; area++;
+                const px = p % G, py = (p / G) | 0; sx += px; sy += py;
+                const nb = [px > 0 ? p - 1 : -1, px < G - 1 ? p + 1 : -1, py > 0 ? p - G : -1, py < G - 1 ? p + G : -1];
+                for (const q of nb) if (q >= 0 && mask[q] && comp[q] < 0) { comp[q] = label; stack[sp++] = q; }
+            }
+            areas.push(area); sums.push([sx, sy]); label++;
+        }
+        const amax = Math.max(1, ...areas);
+        dotBodies = [];
+        const isDot = areas.map(a => a < amax * 0.12);
+        areas.forEach((a, l) => { if (isDot[l]) dotBodies.push({ x: sums[l][0] / a * CELL, y: sums[l][1] / a * CELL, r: Math.sqrt(a / Math.PI) * CELL, label: l }); });
+        comp.isDot = isDot;
+
+        // chamfer (3-4) distance from any ink cell
+        distAll = new Float32Array(G * G);
+        const INF = 1e9;
+        for (let i = 0; i < G * G; i++) distAll[i] = mask[i] ? 0 : INF;
+        for (let y = 0; y < G; y++) for (let x = 0; x < G; x++) {
+            const i = y * G + x; let d = distAll[i];
+            if (x > 0) d = Math.min(d, distAll[i - 1] + 3);
+            if (y > 0) { d = Math.min(d, distAll[i - G] + 3); if (x > 0) d = Math.min(d, distAll[i - G - 1] + 4); if (x < G - 1) d = Math.min(d, distAll[i - G + 1] + 4); }
+            distAll[i] = d;
+        }
+        for (let y = G - 1; y >= 0; y--) for (let x = G - 1; x >= 0; x--) {
+            const i = y * G + x; let d = distAll[i];
+            if (x < G - 1) d = Math.min(d, distAll[i + 1] + 3);
+            if (y < G - 1) { d = Math.min(d, distAll[i + G] + 3); if (x < G - 1) d = Math.min(d, distAll[i + G + 1] + 4); if (x > 0) d = Math.min(d, distAll[i + G - 1] + 4); }
+            distAll[i] = d;
+        }
+        for (let i = 0; i < G * G; i++) distAll[i] = distAll[i] / 3 * CELL; // to px
+    }
+
+    // 2) Bridson Poisson-disc field inside the icon
+    function scatter() {
+        const r = params.spacing, k = 28, cs = r / Math.SQRT2;
+        const gw = Math.ceil(W / cs), grid = new Int32Array(gw * gw).fill(-1);
+        points = []; const active = [];
+        const add = (x, y) => { points.push([x, y]); active.push(points.length - 1); grid[((y / cs) | 0) * gw + ((x / cs) | 0)] = points.length - 1; };
+        add(W / 2 + random(-5, 5), W / 2 + random(-5, 5));
+        while (active.length) {
+            const ai = floor(random(active.length)), [px, py] = points[active[ai]];
+            let found = false;
+            for (let t = 0; t < k; t++) {
+                const a = random(TWO_PI), d = random(r, 2 * r);
+                const x = px + Math.cos(a) * d, y = py + Math.sin(a) * d;
+                if (x < 0 || y < 0 || x >= W || y >= W || !insideField(x, y)) continue;
+                const gx = (x / cs) | 0, gy = (y / cs) | 0; let ok = true;
+                for (let yy = Math.max(0, gy - 2); yy <= Math.min(gw - 1, gy + 2) && ok; yy++)
+                    for (let xx = Math.max(0, gx - 2); xx <= Math.min(gw - 1, gx + 2); xx++) {
+                        const q = grid[yy * gw + xx];
+                        if (q >= 0) { const dx = points[q][0] - x, dy = points[q][1] - y; if (dx * dx + dy * dy < r * r) { ok = false; break; } }
+                    }
+                if (ok) { add(x, y); found = true; break; }
+            }
+            if (!found) active.splice(ai, 1);
+        }
+    }
+
+    // 3) draw: ink field with the letter carved out, dots of the letters kept solid
+    function renderIcon() {
+        const paper = '#F6F5F1', ink = '#111111';
+        const bg = params.invert ? ink : paper, fg = params.invert ? paper : ink;
+        background('#ECEBE6');
+        noStroke(); fill(bg);
+        beginShape();
+        for (let a = 0; a < TWO_PI; a += 0.01) {
+            const c = Math.cos(a), s = Math.sin(a), n = 5;
+            vertex(W / 2 + ICON / 2 * Math.sign(c) * Math.pow(Math.abs(c), 2 / n), W / 2 + ICON / 2 * Math.sign(s) * Math.pow(Math.abs(s), 2 / n));
+        }
+        endShape(CLOSE);
+
+        const base = params.spacing * params.dotSize;
+        const haloPx = params.halo * params.spacing;
+        for (const [x, y] of points) {
+            const gi = Math.min(G - 1, (y / CELL) | 0) * G + Math.min(G - 1, (x / CELL) | 0);
+            if (mask[gi]) continue; // the absence: no mark where the letter lives
+            const d = distAll[gi];
+            let t = haloPx > 0 ? Math.min(1, Math.max(0, (d - base * 0.6) / haloPx)) : 1;
+            t = t * t * (3 - 2 * t);
+            const breathe = 1 + (noise(x * 0.0035, y * 0.0035) - 0.5) * 2 * params.wobble * 0.55;
+            const rad = base * (0.16 + 0.84 * t) * breathe;
+            if (rad < 0.6) continue;
+            if (params.marks === 'dot') { noStroke(); fill(fg); circle(x, y, rad * 2); }
+            else if (params.marks === 'ring') { noFill(); stroke(fg); strokeWeight(Math.max(1, rad * 0.42)); circle(x, y, rad * 1.7); }
+            else {
+                const ang = noise(x * 0.002 + 40, y * 0.002 + 40) * TWO_PI * 1.2 - PI * 0.35;
+                stroke(fg); strokeWeight(Math.max(1, rad * 0.62)); strokeCap(ROUND);
+                const L = rad * 1.25;
+                line(x - Math.cos(ang) * L, y - Math.sin(ang) * L, x + Math.cos(ang) * L, y + Math.sin(ang) * L);
+            }
+        }
+        // the dots (nuqat): the only solid bodies, presence inside absence
+        if (params.solidDots) {
+            noStroke(); fill(fg);
+            for (const b of dotBodies) circle(b.x, b.y, b.r * 2.05);
+        }
+    }
+
+    function updatePreviews() {
+        const img = get(ICON_X, ICON_X, ICON, ICON);
+        const url = img.canvas.toDataURL('image/png');
+        ['mini-120', 'mini-60', 'mini-29'].forEach(id => { document.getElementById(id).src = url; });
+        if (!document.getElementById('export').hidden) document.getElementById('export-img').src = url;
+    }
+
+    function showPNG() {
+        const box = document.getElementById('export');
+        box.hidden = false;
+        document.getElementById('export-img').src = get(ICON_X, ICON_X, ICON, ICON).canvas.toDataURL('image/png');
+        box.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // UI CONTROL HANDLERS
+    // ═══════════════════════════════════════════════════════════════════════
+    const NUMERIC = ['spacing', 'dotSize', 'halo', 'letterScale', 'wobble'];
+
+    function updateParam(paramName, value) {
+        if (NUMERIC.includes(paramName)) {
+            params[paramName] = parseFloat(value);
+            document.getElementById(paramName + '-value').textContent = value;
+        } else {
+            params[paramName] = value;
+        }
+        initializeSystem();
+    }
+
+    function syncUI() {
+        NUMERIC.forEach(n => {
+            document.getElementById(n).value = params[n];
+            document.getElementById(n + '-value').textContent = params[n];
+        });
+        document.getElementById('glyph').value = params.glyph;
+        document.getElementById('font').value = params.font;
+        document.getElementById('marks').value = params.marks;
+        document.getElementById('solidDots').checked = params.solidDots;
+        document.getElementById('invert').checked = params.invert;
+        updateSeedDisplay();
+    }
+
+    function applyPreset(i) {
+        params = {...PRESETS[i]};
+        syncUI();
+        initializeSystem();
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // SEED CONTROL FUNCTIONS - ALWAYS KEEP THESE
+    // ═══════════════════════════════════════════════════════════════════════
+    function updateSeedDisplay() { document.getElementById('seed-input').value = params.seed; }
+
+    function updateSeed() {
+        const newSeed = parseInt(document.getElementById('seed-input').value);
+        if (newSeed && newSeed > 0) { params.seed = newSeed; initializeSystem(); }
+        else updateSeedDisplay();
+    }
+    function previousSeed() { params.seed = Math.max(1, params.seed - 1); updateSeedDisplay(); initializeSystem(); }
+    function nextSeed() { params.seed = params.seed + 1; updateSeedDisplay(); initializeSystem(); }
+    function randomSeedAndUpdate() { params.seed = Math.floor(Math.random() * 999999) + 1; updateSeedDisplay(); initializeSystem(); }
+
+    function resetParameters() {
+        params = {...defaultParams};
+        syncUI();
+        initializeSystem();
+    }
+
+    window.addEventListener('load', updateSeedDisplay);
+</script>

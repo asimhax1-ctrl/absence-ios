@@ -5,7 +5,7 @@ import AppIntents
 
 // ───────── إعدادات الودجت (اضغط مطولًا › تعديل الودجت) — نفس فكرة أذكار ─────────
 struct WidgetConfig: WidgetConfigurationIntent {
-    static var title: LocalizedStringResource = "حاسبة الحرمان"
+    static var title: LocalizedStringResource = "غياب"
     static var description = IntentDescription("نسبة غيابك الحالية ونسبتك لو غبت")
 
     @Parameter(title: "الخط", default: .system)
@@ -276,7 +276,7 @@ struct AbsenceWidget: Widget {
         AppIntentConfiguration(kind: "AbsenceWidget", intent: WidgetConfig.self, provider: Provider()) { e in
             AbsenceWidgetView(e: e)
         }
-        .configurationDisplayName("حاسبة الحرمان")
+        .configurationDisplayName("غياب")
         .description("نسبة غيابك الحالية ونسبتك لو غبت")
         .supportedFamilies([.accessoryRectangular, .accessoryInline, .accessoryCircular, .systemSmall, .systemMedium])
         .contentMarginsDisabled()
