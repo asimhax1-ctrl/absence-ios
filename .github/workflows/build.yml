@@ -40,7 +40,7 @@ jobs:
           grep -E "error:" build.log | sort -u | head -40 | while IFS= read -r line; do
             echo "::warning title=compile::${line//$'\n'/ }"
           done
-          tail -15 build.log | while IFS= read -r line; do echo "::notice title=tail::$line"; done
+          tail -4 build.log | while IFS= read -r line; do echo "::notice title=tail::$line"; done
           APP=build/Build/Products/Release-iphoneos/Absence.app
           echo "::notice title=app::$(du -sh $APP 2>&1 | tr '\t' ' ') | $(ls $APP 2>&1 | tr '\n' ' ' | head -c 600)"
           echo "::notice title=plugins::$(ls $APP/PlugIns 2>&1 | tr '\n' ' ')"

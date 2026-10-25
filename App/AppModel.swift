@@ -8,6 +8,11 @@ final class AppModel: ObservableObject {
         didSet { UserDefaults.standard.set(arNum, forKey: "arNum") }
     }
     @Published var now = Date()
+    // 0 = حسب النظام، 1 = فاتح، 2 = داكن
+    @Published var theme: Int = UserDefaults.standard.integer(forKey: "theme") {
+        didSet { UserDefaults.standard.set(theme, forKey: "theme") }
+    }
+    var scheme: ColorScheme? { theme == 1 ? .light : theme == 2 ? .dark : nil }
 
     init() {
         if let s = Store.shared.load() { state = s }

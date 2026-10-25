@@ -9,26 +9,39 @@ struct ExamsView: View {
     var body: some View {
         NavigationStack {
             List {
-                if m.state.exams.isEmpty { Text("ما فيه اختبارات. اضغط + لإضافة اختبار وتذكير.").foregroundStyle(.secondary) }
+                if m.state.exams.isEmpty {
+                    Text("ما فيه اختبارات. اضغط + لإضافة اختبار وتذكير.").foregroundStyle(Theme.secondary).listRowBackground(Theme.card)
+                }
                 ForEach(m.state.exams.sorted { ($0.date, $0.time) < ($1.date, $1.time) }) { e in
                     let n = Engine.examDaysLeft(e, now: m.now)
                     Button { editing = e } label: {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text((Term.course(e.courseId).map { $0.short + " — " } ?? "") + e.name).bold()
-                            Text(m.t(Fmt.weekdayStamp(e.date) + " · " + e.time + " · " + (n < 0 ? "انتهى" : n == 0 ? "اليوم" : n == 1 ? "بكرة" : "بعد " + Fmt.daysWord(n))))
-                                .font(.caption).foregroundStyle(.secondary)
+                        HStack(spacing: 14) {
+                            VStack(spacing: 0) {
+                                Text(m.t(String(Int(e.date.suffix(2)) ?? 0))).font(.title2.weight(.bold))
+                                Text(Term.months[(Int(e.date.dropFirst(5).prefix(2)) ?? 1) - 1]).font(.caption2.weight(.semibold))
+                            }
+                            .foregroundStyle(n < 0 ? Theme.secondary : Theme.accentInk)
+                            .frame(width: 56, height: 56)
+                            .background(n < 0 ? Theme.ground : Theme.accentSoft, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text((Term.course(e.courseId).map { $0.short + " — " } ?? "") + e.name).font(.body.weight(.semibold)).foregroundStyle(Theme.text)
+                                Text(m.t(Term.days[Fmt.weekday(iso: e.date)] + " · " + e.time + " · " + (n < 0 ? "انتهى" : n == 0 ? "اليوم" : n == 1 ? "بكرة" : "بعد " + Fmt.daysWord(n))))
+                                    .font(.footnote).foregroundStyle(Theme.secondary)
+                            }
                         }
                     }
-                    .foregroundStyle(n < 0 ? Color.secondary : Color.primary)
+                    .listRowBackground(Theme.card)
                     .swipeActions { Button("حذف", role: .destructive) { m.deleteExam(e) } }
                 }
             }
+            .scrollContentBackground(.hidden)
+            .background(Theme.ground.ignoresSafeArea())
             .navigationTitle("الاختبارات")
             .toolbar {
                 Button {
                     editing = Exam(id: UUID().uuidString, courseId: Term.courses.first?.id, name: "نصفي",
                                    date: Fmt.iso(Fmt.addDays(Date(), 7)), time: "09:00", remind: 1)
-                } label: { Image(systemName: "plus") }
+                } label: { Image(systemName: "plus.circle.fill").font(.title3) }
             }
             .sheet(item: $editing) { e in ExamSheet(exam: e) }
         }
@@ -45,15 +58,24 @@ struct ExamSheet: View {
     var body: some View {
         NavigationStack {
             Form {
-                Picker("المادة", selection: Binding(get: { exam.courseId ?? "" }, set: { exam.courseId = $0.isEmpty ? nil : $0 })) {
-                    ForEach(Term.courses) { Text($0.short).tag($0.id) }
-                    Text("بدون مادة").tag("")
+                Section {
+                    Picker("المادة", selection: Binding(get: { exam.courseId ?? "" }, set: { exam.courseId = $0.isEmpty ? nil : $0 })) {
+                        ForEach(Term.courses) { Text($0.short).tag($0.id) }
+                        Text("بدون مادة").tag("")
+                    }
+                    TextField("اسم الاختبار (نصفي، فاينال، كويز…)", text: $exam.name)
                 }
-                TextField("اسم الاختبار (نصفي، فاينال، كويز…)", text: $exam.name)
-                DatePicker("الموعد", selection: $when, displayedComponents: [.date, .hourAndMinute])
-                Picker("التذكير", selection: $exam.remind) { ForEach(reminds, id: \.1) { Text($0.0).tag($0.1) } }
+                .listRowBackground(Theme.card)
+                Section {
+                    DatePicker("الموعد", selection: $when, displayedComponents: [.date, .hourAndMinute])
+                    Picker("التذكير", selection: $exam.remind) { ForEach(reminds, id: \.1) { Text($0.0).tag($0.1) } }
+                }
+                .listRowBackground(Theme.card)
             }
+            .scrollContentBackground(.hidden)
+            .background(Theme.ground.ignoresSafeArea())
             .navigationTitle("اختبار")
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("إلغاء") { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) {
@@ -64,6 +86,7 @@ struct ExamSheet: View {
                         if exam.name.trimmingCharacters(in: .whitespaces).isEmpty { exam.name = "اختبار" }
                         m.saveExam(exam); dismiss()
                     }
+                    .bold()
                 }
             }
             .onAppear {
@@ -85,34 +108,52 @@ struct SettingsView: View {
     var body: some View {
         NavigationStack {
             Form {
+                Section("المظهر") {
+                    Picker("المظهر", selection: $m.theme) {
+                        Text("تلقائي").tag(0)
+                        Text("فاتح").tag(1)
+                        Text("داكن").tag(2)
+                    }
+                    .pickerStyle(.segmented)
+                    Toggle("أرقام عربية داخل التطبيق", isOn: $m.arNum)
+                }
+                .listRowBackground(Theme.card)
                 Section("الحساب") {
                     Stepper(m.t("هامش الأمان: \(m.state.buffer) ساعة لكل مادة"), value: Binding(get: { m.state.buffer }, set: { m.setBuffer($0) }), in: 0...4)
                     DatePicker("بداية الفصل", selection: Binding(get: { Fmt.date(m.state.semStart) ?? Date() }, set: { m.setSemStart($0) }), displayedComponents: .date)
                     Toggle("إظهار رقم الأسبوع", isOn: Binding(get: { m.state.showWeek }, set: { m.setShowWeek($0) }))
-                    Toggle("أرقام عربية داخل التطبيق", isOn: $m.arNum)
                 }
+                .listRowBackground(Theme.card)
                 Section {
                     NavigationLink("معرض الخطوط") { FontGallery() }
                     Text("لتغيير خط الودجت وحجمه وعرضه وخلفيته: اضغط مطولًا على الودجت › تعديل الودجت.")
-                        .font(.caption).foregroundStyle(.secondary)
+                        .font(.footnote).foregroundStyle(Theme.secondary)
                 } header: { Text("الودجت") }
+                .listRowBackground(Theme.card)
                 Section {
                     Text(Store.shared.backendsText).font(.callout.monospaced())
-                    Text(widgetStatus).font(.caption)
+                    Text(widgetStatus).font(.footnote)
                     Button("حدّث الودجت الحين") { WidgetCenter.shared.reloadAllTimelines(); msg = "طلبت من iOS يحدّث الودجت." }
                 } header: { Text("مشاركة البيانات مع الودجت") } footer: {
-                    Text(Store.shared.sharedWithWidget ? "الودجت يقرأ نفس بياناتك." : "التوقيع الحالي ما يسمح بالمشاركة، فالودجت بيكتب «افتح التطبيق». جرّب توقيع ESign بشهادة تدعم App Groups.")
+                    Text(Store.shared.sharedWithWidget ? "الودجت يقرأ نفس بياناتك." : "التوقيع الحالي ما يسمح بالمشاركة، فالودجت بيكتب «افتح التطبيق».")
                 }
+                .listRowBackground(Theme.card)
                 Section("نقل البيانات") {
                     Button("استيراد من Scriptable (الصق من الحافظة)") {
                         let txt = UIPasteboard.general.string ?? ""
-                        msg = m.importJSON(txt) ? "تم الاستيراد ✓" : "الحافظة ما فيها بيانات الحاسبة. في Scriptable: الإعدادات › تصدير البيانات للتطبيق."
+                        msg = m.importJSON(txt) ? "تم الاستيراد ✓" : "الحافظة ما فيها بيانات الحاسبة. في Scriptable: الإعدادات › تصدير البيانات لتطبيق iOS."
                     }
                     Button("نسخ بياناتي (نسخة احتياطية)") { UIPasteboard.general.string = m.exportJSON(); msg = "انسخت إلى الحافظة." }
                     Button("إرجاع السجل لغياب البوابة فقط", role: .destructive) { confirmReset = true }
                 }
-                Section { Text("الحرمان عند ٢٥٪ بدون عذر، والحد الآمن ٢٤٫٩٩٪. الغياب بعذر ما ينحسب.").font(.caption).foregroundStyle(.secondary) }
+                .listRowBackground(Theme.card)
+                Section {
+                    Text("الحرمان عند ٢٥٪ بدون عذر، والحد الآمن ٢٤٫٩٩٪. الغياب بعذر ما ينحسب.").font(.footnote).foregroundStyle(Theme.secondary)
+                }
+                .listRowBackground(Theme.card)
             }
+            .scrollContentBackground(.hidden)
+            .background(Theme.ground.ignoresSafeArea())
             .navigationTitle("الإعدادات")
             .alert(msg ?? "", isPresented: Binding(get: { msg != nil }, set: { if !$0 { msg = nil } })) { Button("تم") {} }
             .confirmationDialog("يحذف كل تسجيلاتك ويرجع لغياب البوابة (حتى ٦ أكتوبر). الاختبارات تبقى.", isPresented: $confirmReset, titleVisibility: .visible) {
@@ -135,12 +176,15 @@ struct FontGallery: View {
     var body: some View {
         List(FontChoice.allCases) { f in
             VStack(alignment: .leading, spacing: 4) {
-                Text(f.label).font(.caption).foregroundStyle(.secondary)
+                Text(f.label).font(.caption).foregroundStyle(Theme.secondary)
                 Text(m.t("الأحــــد  معادلات 7.3% ←9.8%")).font(f.font(26, bold: true)).lineLimit(1).minimumScaleFactor(0.5)
                 Text(m.t("الأحــــد  معادلات 7.3%")).font(f.font(20, bold: false)).lineLimit(1).minimumScaleFactor(0.5).opacity(0.8)
             }
             .padding(.vertical, 4)
+            .listRowBackground(Theme.card)
         }
+        .scrollContentBackground(.hidden)
+        .background(Theme.ground.ignoresSafeArea())
         .navigationTitle("الخطوط")
     }
 }
