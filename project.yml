@@ -2,18 +2,18 @@ name: Absence
 options:
   bundleIdPrefix: com.asim
   deploymentTarget:
-    iOS: "17.0"
+    iOS: "18.0"
   developmentLanguage: ar
 settings:
   base:
     SWIFT_VERSION: "5.0"
-    IPHONEOS_DEPLOYMENT_TARGET: "17.0"
+    IPHONEOS_DEPLOYMENT_TARGET: "18.0"
     TARGETED_DEVICE_FAMILY: "1,2"
     CODE_SIGNING_ALLOWED: "NO"
     CODE_SIGNING_REQUIRED: "NO"
     CODE_SIGN_IDENTITY: ""
     DEVELOPMENT_TEAM: ""
-    MARKETING_VERSION: "1.2"
+    MARKETING_VERSION: "2.0"
     CURRENT_PROJECT_VERSION: "1"
     ENABLE_USER_SCRIPT_SANDBOXING: "NO"
 targets:
@@ -56,6 +56,7 @@ targets:
         - ReemKufi.ttf
         - Tajawal-Black.ttf
         - Tajawal-Regular.ttf
+        - ReadexPro.ttf
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.asim.absence1448
@@ -99,6 +100,7 @@ targets:
         - ReemKufi.ttf
         - Tajawal-Black.ttf
         - Tajawal-Regular.ttf
+        - ReadexPro.ttf
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.asim.absence1448.widget

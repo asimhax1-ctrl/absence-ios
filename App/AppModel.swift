@@ -13,6 +13,9 @@ final class AppModel: ObservableObject {
         didSet { UserDefaults.standard.set(theme, forKey: "theme") }
     }
     var scheme: ColorScheme? { theme == 1 ? .light : theme == 2 ? .dark : nil }
+    @Published var appFont: AppFont = AppFont.current {
+        didSet { AppFont.current = appFont; UserDefaults.standard.set(appFont.rawValue, forKey: "appFont") }
+    }
 
     // إشعار صغير أعلى الشاشة بدل نوافذ التنبيه
     @Published var toast: (text: String, ok: Bool)? = nil
